@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Speech Enhancement Inference"""
+"""Speech Enhancement Inference Script"""
 
 import os
 import sys
@@ -9,20 +9,27 @@ import librosa
 import argparse
 from pathlib import Path
 
-sys.path.append('/home/radhey/code/ai-clrvoice')
+# Import global path configuration
+from config.paths import PATHS, get_path
 from src.unet_model import UNet
 from src.audio_utils import load_audio, save_audio
 
 class GPUSpeechEnhancer:
     """High-quality speech enhancer using trained GPU model"""
 
-    def __init__(self, model_path, device='auto'):
+    def __init__(self, model_path=None, device='auto'):
         if device == 'auto':
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         else:
             self.device = torch.device(device)
 
         print(f"Using device: {self.device}")
+
+        # Use global path configuration for model if not specified
+        if model_path is None:
+            model_path = get_path('models.best_model')
+        
+        print(f"Loading model from: {model_path}")
 
         # Initialize model with same architecture as training
         self.model = UNet(
@@ -137,26 +144,22 @@ class GPUSpeechEnhancer:
         weight_sum = np.zeros(total_length)
 
         for enhanced_chunk, start_idx, original_length in enhanced_chunks:
-            end_idx = start_idx + original_length
-            chunk_length = min(len(enhanced_chunk), original_length)
-
-            # Create blend weights with crossfading
+            end_idx = min(start_idx + len(enhanced_chunk), total_length)
+            chunk_length = end_idx - start_idx
+            
+            # Apply crossfading weights
             weights = np.ones(chunk_length)
-
-            if overlap_samples > 0 and len(enhanced_chunks) > 1:
-                fade_length = min(overlap_samples, chunk_length // 2)
-
+            if overlap_samples > 0:
                 # Fade in
-                if start_idx > 0:
-                    weights[:fade_length] = np.linspace(0, 1, fade_length)
-
+                fade_in_samples = min(overlap_samples, chunk_length // 2)
+                weights[:fade_in_samples] = np.linspace(0, 1, fade_in_samples)
+                
                 # Fade out
-                if end_idx < total_length:
-                    weights[-fade_length:] = np.linspace(1, 0, fade_length)
-
-            # Apply weighted blending
-            enhanced_audio[start_idx:start_idx + chunk_length] += enhanced_chunk[:chunk_length] * weights
-            weight_sum[start_idx:start_idx + chunk_length] += weights
+                fade_out_samples = min(overlap_samples, chunk_length // 2)
+                weights[-fade_out_samples:] = np.linspace(1, 0, fade_out_samples)
+            
+            enhanced_audio[start_idx:end_idx] += enhanced_chunk[:chunk_length] * weights
+            weight_sum[start_idx:end_idx] += weights
 
         # Normalize
         weight_sum[weight_sum == 0] = 1
@@ -166,13 +169,12 @@ class GPUSpeechEnhancer:
 
 def main():
     """Main inference function"""
-    import argparse
 
     parser = argparse.ArgumentParser(description='High-Quality Speech Enhancement')
     parser.add_argument('input', help='Input noisy audio file')
     parser.add_argument('output', help='Output enhanced audio file')
-    parser.add_argument('--model', default='/home/radhey/code/ai-clrvoice/models/best_gpu_model.pth',
-                       help='Path to trained model')
+    parser.add_argument('--model', default=None,
+                       help='Path to trained model (default: use global config)')
     parser.add_argument('--device', default='auto', help='Device to use (auto, cpu, cuda)')
 
     args = parser.parse_args()

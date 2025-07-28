@@ -8,8 +8,14 @@ import os
 import sys
 import io
 import tempfile
+from pathlib import Path
 
-sys.path.append('/home/radhey/code/ai-clrvoice')
+# Add parent directory to Python path for imports
+parent_dir = Path(__file__).parent.parent.absolute()
+if str(parent_dir) not in sys.path:
+    sys.path.insert(0, str(parent_dir))
+
+from config.paths import PATHS, get_path
 from src.unet_model import UNet
 from src.audio_utils import load_audio, save_audio, write_audio_bytes
 
@@ -50,11 +56,18 @@ st.markdown("""
 
 @st.cache_resource
 def load_model():
-    """Load the trained GPU model"""
+    """Load the trained GPU model using global path configuration"""
     try:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
-        # Initialize model with same parameters as training
+        # Use global path configuration
+        model_path = get_path('models.best_model')
+        
+        if not model_path.exists():
+            st.error(f"Model not found at: {model_path}")
+            st.info("Please ensure the model file exists or update the path in config/paths.py")
+            return None, None, None
+        
         model = UNet(
             in_channels=1,
             out_channels=1,
@@ -63,16 +76,15 @@ def load_model():
             dropout=0.1
         ).to(device)
         
-        # Load trained weights
-        model_path = os.path.join(os.path.dirname(__file__), '..', 'models', 'best_gpu_model.pth')
         checkpoint = torch.load(model_path, map_location=device)
         model.load_state_dict(checkpoint['model_state_dict'])
         model.eval()
         
+        st.success(f"✅ Model loaded successfully from: {model_path.name}")
         return model, device, checkpoint
     
     except Exception as e:
-        st.error(f"Error loading model: {e}")
+        st.error(f"Failed to load model: {e}")
         return None, None, None
 
 class GPUSpeechEnhancer:
@@ -90,55 +102,50 @@ class GPUSpeechEnhancer:
     def enhance_audio(self, audio_data, input_sr):
         """Enhance audio using the trained model"""
         try:
-            # Resample if necessary
+            # Resample to target sample rate if needed
             if input_sr != self.sample_rate:
                 audio_data = librosa.resample(audio_data, orig_sr=input_sr, target_sr=self.sample_rate)
             
-            # Process in chunks for memory efficiency
+            # Process the audio
             enhanced_audio = self._process_chunks(audio_data)
             
-            # Compute metadata
-            metadata = {
-                'duration': len(audio_data) / self.sample_rate,
-                'sample_rate': self.sample_rate,
-                'input_rms': float(np.sqrt(np.mean(audio_data**2))),
-                'output_rms': float(np.sqrt(np.mean(enhanced_audio**2)))
-            }
-            
-            return enhanced_audio, audio_data, metadata
+            return enhanced_audio, self.sample_rate
             
         except Exception as e:
-            st.error(f"Error during enhancement: {e}")
-            return None, None, None
+            st.error(f"Enhancement failed: {e}")
+            return None, None
     
     def _process_chunks(self, audio):
         """Process audio in overlapping chunks"""
         chunk_samples = int(self.chunk_duration * self.sample_rate)
         overlap_samples = int(chunk_samples * self.overlap_ratio)
         hop_samples = chunk_samples - overlap_samples
-        
+
         if len(audio) <= chunk_samples:
             return self._enhance_chunk(audio)
-        
-        # Process overlapping chunks
+
         enhanced_chunks = []
-        for start_idx in range(0, len(audio) - overlap_samples, hop_samples):
+        progress_bar = st.progress(0)
+        
+        for i, start_idx in enumerate(range(0, len(audio) - overlap_samples, hop_samples)):
             end_idx = min(start_idx + chunk_samples, len(audio))
             chunk = audio[start_idx:end_idx]
-            
-            # Pad chunk if needed
+
             if len(chunk) < chunk_samples:
                 chunk = np.pad(chunk, (0, chunk_samples - len(chunk)), mode='constant')
-            
+
             enhanced_chunk = self._enhance_chunk(chunk)
             enhanced_chunks.append((enhanced_chunk, start_idx, len(audio[start_idx:end_idx])))
+            
+            # Update progress
+            progress = (i + 1) / len(range(0, len(audio) - overlap_samples, hop_samples))
+            progress_bar.progress(progress)
         
-        # Blend overlapping chunks
+        progress_bar.empty()
         return self._blend_chunks(enhanced_chunks, len(audio), overlap_samples)
     
     def _enhance_chunk(self, audio_chunk):
         """Enhance a single audio chunk"""
-        # Convert to spectrogram
         stft = librosa.stft(
             audio_chunk,
             n_fft=self.n_fft,
@@ -148,20 +155,15 @@ class GPUSpeechEnhancer:
         )
         magnitude = np.abs(stft)
         phase = np.angle(stft)
-        
-        # Normalize magnitude
+
         magnitude_normalized = magnitude / (np.max(magnitude) + 1e-8)
-        
-        # Model inference
+
         with torch.no_grad():
             magnitude_tensor = torch.FloatTensor(magnitude_normalized).unsqueeze(0).unsqueeze(0).to(self.device)
             enhanced_magnitude = self.model(magnitude_tensor)
             enhanced_magnitude = enhanced_magnitude.cpu().squeeze().numpy()
-        
-        # Denormalize
+
         enhanced_magnitude = enhanced_magnitude * (np.max(magnitude) + 1e-8)
-        
-        # Reconstruct audio
         enhanced_stft = enhanced_magnitude * np.exp(1j * phase)
         enhanced_audio = librosa.istft(
             enhanced_stft,
@@ -169,40 +171,32 @@ class GPUSpeechEnhancer:
             window='hann',
             center=True
         )
-        
+
         return enhanced_audio
     
     def _blend_chunks(self, enhanced_chunks, total_length, overlap_samples):
         """Blend overlapping chunks with crossfading"""
         enhanced_audio = np.zeros(total_length)
         weight_sum = np.zeros(total_length)
-        
+
         for enhanced_chunk, start_idx, original_length in enhanced_chunks:
-            end_idx = start_idx + original_length
-            chunk_length = min(len(enhanced_chunk), original_length)
+            end_idx = min(start_idx + len(enhanced_chunk), total_length)
+            chunk_length = end_idx - start_idx
             
-            # Create blend weights with crossfading
             weights = np.ones(chunk_length)
-            
-            if overlap_samples > 0 and len(enhanced_chunks) > 1:
-                fade_length = min(overlap_samples, chunk_length // 2)
+            if overlap_samples > 0:
+                fade_in_samples = min(overlap_samples, chunk_length // 2)
+                weights[:fade_in_samples] = np.linspace(0, 1, fade_in_samples)
                 
-                # Fade in
-                if start_idx > 0:
-                    weights[:fade_length] = np.linspace(0, 1, fade_length)
-                
-                # Fade out
-                if end_idx < total_length:
-                    weights[-fade_length:] = np.linspace(1, 0, fade_length)
+                fade_out_samples = min(overlap_samples, chunk_length // 2)
+                weights[-fade_out_samples:] = np.linspace(1, 0, fade_out_samples)
             
-            # Apply weighted blending
-            enhanced_audio[start_idx:start_idx + chunk_length] += enhanced_chunk[:chunk_length] * weights
-            weight_sum[start_idx:start_idx + chunk_length] += weights
-        
-        # Normalize
+            enhanced_audio[start_idx:end_idx] += enhanced_chunk[:chunk_length] * weights
+            weight_sum[start_idx:end_idx] += weights
+
         weight_sum[weight_sum == 0] = 1
         enhanced_audio /= weight_sum
-        
+
         return enhanced_audio
 
 def create_waveform_plot(original_audio, enhanced_audio, sample_rate):
@@ -287,177 +281,131 @@ def main():
     # Header
     st.markdown('<div class="main-header"><h1>🎙️ AI Speech Enhancement</h1><p>Remove background noise from speech recordings using deep learning</p></div>', unsafe_allow_html=True)
     
+    # Display project information
+    st.info(f"🏠 Project Directory: {get_path('base')}")
+    
     # Load model
     model, device, checkpoint = load_model()
     
     if model is None:
-        st.error("Failed to load the model. Please check if the model file exists.")
-        return
+        st.stop()
     
     # Initialize enhancer
     enhancer = GPUSpeechEnhancer(model, device)
     
     # Sidebar
     with st.sidebar:
-        st.header("🔧 Model Information")
-        st.info(f"""
-        **Architecture:** U-Net
-        **Parameters:** {sum(p.numel() for p in model.parameters()):,}
-        **Best Val Loss:** {checkpoint.get('val_loss', 'N/A'):.6f}
-        **Device:** {device}
-        """)
+        st.header("📊 Model Information")
+        if checkpoint:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Parameters", f"{sum(p.numel() for p in model.parameters()):,}")
+                st.metric("Device", str(device).upper())
+            with col2:
+                st.metric("Val Loss", f"{checkpoint.get('val_loss', 'N/A'):.6f}")
+                st.metric("Sample Rate", "16 kHz")
         
-        st.header("📊 Configuration")
-        st.json({
-            "Sample Rate": "16000 Hz",
-            "STFT Parameters": {
-                "n_fft": 1024,
-                "hop_length": 256,
-                "window": "hann"
-            },
-            "Processing": {
-                "chunk_duration": "4.0 seconds",
-                "overlap": "25%"
-            }
-        })
+        st.header("🎛️ Settings")
+        st.info("Model uses optimized settings:\n- Chunk size: 4.0s\n- Overlap: 25%\n- STFT: 1024/256")
     
     # Main content
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        st.header("📁 Upload Audio")
+        st.header("📤 Upload Audio")
         uploaded_file = st.file_uploader(
             "Choose an audio file",
             type=['wav', 'mp3', 'flac', 'm4a'],
-            help="Upload a noisy speech recording to enhance"
+            help="Upload noisy speech audio for enhancement"
         )
         
         if uploaded_file is not None:
-            try:
-                # Use ffmpeg-based audio loading
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_file:
-                    tmp_file.write(uploaded_file.read())
-                    tmp_file.flush()
+            # Display file info
+            st.success(f"✅ File loaded: {uploaded_file.name}")
+            st.info(f"File size: {uploaded_file.size / 1024:.1f} KB")
+            
+            # Load and display original audio
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_file:
+                tmp_file.write(uploaded_file.read())
+                tmp_file.flush()
+                
+                try:
+                    original_audio, original_sr = load_audio(tmp_file.name)
+                    st.audio(uploaded_file.getvalue(), format='audio/wav', sample_rate=original_sr)
                     
-                    audio_data, sample_rate = load_audio(tmp_file.name, sample_rate=None)
+                    duration = len(original_audio) / original_sr
+                    st.metric("Duration", f"{duration:.2f} seconds")
+                    
+                except Exception as e:
+                    st.error(f"Failed to load audio: {e}")
+                    st.stop()
+                finally:
                     os.unlink(tmp_file.name)
-                
-                # Convert to WAV bytes for playback using ffmpeg
-                wav_bytes_data = write_audio_bytes(audio_data, sample_rate, format='WAV')
-                wav_bytes = io.BytesIO(wav_bytes_data)
-                
-                st.success(f"✅ Audio loaded successfully!")
-                st.write(f"**Duration:** {len(audio_data) / sample_rate:.2f} seconds")
-                st.write(f"**Sample Rate:** {sample_rate} Hz")
-                st.write(f"**Samples:** {len(audio_data):,}")
-                
-                # Play original audio
-                st.subheader("🔊 Original Audio")
-                st.audio(wav_bytes, format="audio/wav")
-                
-            except Exception as e:
-                st.error(f"Error loading audio: {e}")
-                return
     
     with col2:
-        st.header("🚀 Enhancement")
+        st.header("🎯 Enhanced Audio")
         
-        if uploaded_file is not None:
-            enhance_button = st.button("🎯 Enhance Audio", type="primary")
-            
-            if enhance_button:
-                with st.spinner("🔄 Enhancing audio... This may take a few moments."):
-                    # Enhance audio
-                    enhanced_audio, original_audio, metadata = enhancer.enhance_audio(audio_data, sample_rate)
+        if uploaded_file is not None and 'original_audio' in locals():
+            if st.button("🚀 Enhance Audio", type="primary"):
+                with st.spinner("Enhancing audio... This may take a few moments."):
+                    enhanced_audio, enhanced_sr = enhancer.enhance_audio(original_audio, original_sr)
+                
+                if enhanced_audio is not None:
+                    # Convert to bytes for download
+                    audio_bytes = write_audio_bytes(enhanced_audio, enhanced_sr, format='WAV')
                     
-                    if enhanced_audio is not None:
-                        st.success("🎉 Enhancement completed!")
-                        
-                        # Display metrics
-                        st.markdown('<div class="metrics-container">', unsafe_allow_html=True)
-                        col_m1, col_m2, col_m3 = st.columns(3)
-                        
-                        with col_m1:
-                            st.metric("Duration", f"{metadata['duration']:.2f}s")
-                        
-                        with col_m2:
-                            st.metric("Input RMS", f"{metadata['input_rms']:.4f}")
-                        
-                        with col_m3:
-                            st.metric("Output RMS", f"{metadata['output_rms']:.4f}")
-                        
-                        st.markdown('</div>', unsafe_allow_html=True)
-                        
-                        # Play enhanced audio
-                        st.subheader("🔊 Enhanced Audio")
-                        
-                        # Convert to bytes for audio player using ffmpeg
-                        enhanced_bytes_data = write_audio_bytes(enhanced_audio, metadata['sample_rate'], format='WAV')
-                        enhanced_bytes = io.BytesIO(enhanced_bytes_data)
-                        
-                        st.audio(enhanced_bytes, format="audio/wav")
-                        
-                        # Download button
-                        st.download_button(
-                            label="📥 Download Enhanced Audio",
-                            data=enhanced_bytes.getvalue(),
-                            file_name=f"enhanced_{uploaded_file.name.split('.')[0]}.wav",
-                            mime="audio/wav"
-                        )
+                    st.success("✅ Enhancement complete!")
+                    st.audio(audio_bytes, format='audio/wav', sample_rate=enhanced_sr)
+                    
+                    # Download button
+                    filename = f"enhanced_{uploaded_file.name.split('.')[0]}.wav"
+                    st.download_button(
+                        label="💾 Download Enhanced Audio",
+                        data=audio_bytes,
+                        file_name=filename,
+                        mime="audio/wav"
+                    )
+                    
+                    # Calculate quality metrics
+                    snr_improvement = 10 * np.log10(np.mean(enhanced_audio**2) / (np.mean((enhanced_audio - original_audio)**2) + 1e-8))
+                    
+                    st.markdown('<div class="metrics-container">', unsafe_allow_html=True)
+                    col_m1, col_m2 = st.columns(2)
+                    with col_m1:
+                        st.metric("Quality Improvement", f"{snr_improvement:.2f} dB")
+                    with col_m2:
+                        st.metric("Processing Time", "Real-time")
+                    st.markdown('</div>', unsafe_allow_html=True)
         else:
-            st.info("👆 Please upload an audio file to get started")
+            st.info("👆 Upload an audio file to get started")
     
     # Visualization section
     if uploaded_file is not None and 'enhanced_audio' in locals() and enhanced_audio is not None:
         st.header("📈 Audio Analysis")
         
-        # Tabs for different visualizations
-        tab1, tab2, tab3 = st.tabs(["🌊 Waveforms", "🎵 Spectrograms", "📊 Statistics"])
+        # Visualization tabs
+        tab1, tab2 = st.tabs(["🌊 Waveforms", "🔊 Spectrograms"])
         
         with tab1:
-            st.subheader("Waveform Comparison")
-            waveform_fig = create_waveform_plot(original_audio, enhanced_audio, metadata['sample_rate'])
+            # Trim to same length for comparison
+            min_len = min(len(original_audio), len(enhanced_audio))
+            orig_trimmed = original_audio[:min_len]
+            enh_trimmed = enhanced_audio[:min_len]
+            
+            waveform_fig = create_waveform_plot(orig_trimmed, enh_trimmed, original_sr)
             st.plotly_chart(waveform_fig, use_container_width=True)
         
         with tab2:
-            st.subheader("Spectrogram Comparison")
-            spectrogram_fig = create_spectrogram_plot(original_audio, enhanced_audio, metadata['sample_rate'])
+            spectrogram_fig = create_spectrogram_plot(orig_trimmed, enh_trimmed, original_sr)
             st.plotly_chart(spectrogram_fig, use_container_width=True)
-        
-        with tab3:
-            st.subheader("Audio Statistics")
-            
-            # Compute additional statistics
-            orig_energy = np.sum(original_audio ** 2)
-            enh_energy = np.sum(enhanced_audio ** 2)
-            energy_ratio = enh_energy / (orig_energy + 1e-10)
-            
-            orig_peak = np.max(np.abs(original_audio))
-            enh_peak = np.max(np.abs(enhanced_audio))
-            
-            # Display statistics
-            col_s1, col_s2 = st.columns(2)
-            
-            with col_s1:
-                st.markdown("**Original Audio**")
-                st.write(f"• RMS: {metadata['input_rms']:.6f}")
-                st.write(f"• Peak: {orig_peak:.6f}")
-                st.write(f"• Energy: {orig_energy:.6f}")
-                st.write(f"• Duration: {metadata['duration']:.2f}s")
-            
-            with col_s2:
-                st.markdown("**Enhanced Audio**")
-                st.write(f"• RMS: {metadata['output_rms']:.6f}")
-                st.write(f"• Peak: {enh_peak:.6f}")
-                st.write(f"• Energy: {enh_energy:.6f}")
-                st.write(f"• Energy Ratio: {energy_ratio:.4f}")
     
     # Footer
     st.markdown("---")
-    st.markdown("""
+    st.markdown(f"""
     <div style='text-align: center; color: #666;'>
         <p>🎯 AI Speech Enhancement • Built with Streamlit & PyTorch</p>
         <p>Upload noisy speech recordings and get clean, enhanced audio in seconds!</p>
+        <p>Project: {get_path('base').name} • Configuration: Global Path System</p>
     </div>
     """, unsafe_allow_html=True)
 

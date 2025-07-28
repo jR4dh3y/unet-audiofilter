@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Quick quality assessment for enhanced audio"""
+"""Audio Quality Assessment Tool - Enhanced with Global Path Configuration"""
 
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-sys.path.append('/home/radhey/code/ai-clrvoice')
+from config.paths import PATHS, get_path
 from src.audio_utils import load_audio
 
 def calculate_snr(signal, noise):
@@ -59,20 +59,36 @@ def analyze_enhancement(noisy_path, clean_path, enhanced_path):
     }
 
 def main():
-    """Analyze multiple test samples"""
+    """Analyze multiple test samples using global path configuration"""
+    
+    print("Audio Quality Assessment Tool")
+    print("=" * 50)
+    print(f"Using dataset from: {get_path('dataset.base')}")
+    print(f"Results directory: {get_path('results.comparison')}")
+    print("=" * 50)
     
     test_files = ['p232_001', 'p232_010']
     results = []
     
     for file_id in test_files:
-        noisy_path = f"dataset/noisy_testset_wav/{file_id}.wav"
-        clean_path = f"dataset/clean_testset_wav/{file_id}.wav"
-        enhanced_path = f"results/comparison/test_enhanced_{file_id}.wav"
+        # Use global paths for dataset locations
+        noisy_path = get_path('dataset.noisy_test') / f"{file_id}.wav"
+        clean_path = get_path('dataset.clean_test') / f"{file_id}.wav"
+        enhanced_path = get_path('results.comparison') / f"test_enhanced_{file_id}.wav"
         
-        if Path(noisy_path).exists() and Path(clean_path).exists() and Path(enhanced_path).exists():
+        if noisy_path.exists() and clean_path.exists() and enhanced_path.exists():
             result = analyze_enhancement(noisy_path, clean_path, enhanced_path)
             result['file_id'] = file_id
             results.append(result)
+        else:
+            print(f"⚠ Missing files for {file_id}:")
+            if not noisy_path.exists():
+                print(f"   - Noisy: {noisy_path}")
+            if not clean_path.exists():
+                print(f"   - Clean: {clean_path}")
+            if not enhanced_path.exists():
+                print(f"   - Enhanced: {enhanced_path}")
+            print()
     
     # Summary
     if results:
@@ -85,9 +101,15 @@ def main():
         print(f"Average MSE Improvement: {avg_mse_improvement:.1f}%")
         print(f"Files Processed: {len(results)}")
         print(f"GPU Model Performance: EXCELLENT ✓")
-        print(f"Files location: results/comparison/")
+        print(f"Files location: {get_path('results.comparison')}")
         print("Input files: input_*.wav")
         print("Enhanced files: test_enhanced_*.wav")
+    else:
+        print("✗ No test files found!")
+        print("Please ensure:")
+        print(f"1. Dataset exists at: {get_path('dataset.base')}")
+        print(f"2. Enhanced samples exist at: {get_path('results.comparison')}")
+        print("3. Run inference script first to generate enhanced samples")
 
 if __name__ == '__main__':
     main()

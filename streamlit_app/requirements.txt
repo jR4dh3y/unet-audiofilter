@@ -1,6 +1,0 @@
-# Streamlit App Requirements
-streamlit>=1.28.0
-plotly>=5.0.0
-scipy>=1.8.0
-# Note: ffmpeg required for audio I/O (install via system package manager)
-# PIL is included with Pillow which is a streamlit dependency

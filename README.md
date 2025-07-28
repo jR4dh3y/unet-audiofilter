@@ -1,7 +1,6 @@
 # AI Speech Enhancement - Clean Voice
 
 A GPU-accelerated deep learning system for speech enhancement using U-Net architecture.
-
 ## Project Overview
 
 This project implements a complete pipeline for removing background noise from speech recordings using a U-Net model trained on the VoiceBank+DEMAND dataset.
@@ -10,48 +9,98 @@ This project implements a complete pipeline for removing background noise from s
 
 ```
 ai-clrvoice/
-├── notebooks/
-│   └── main_training.ipynb       # Main working file - Complete training pipeline
+├── config/                       # Global configuration
+│   ├── __init__.py
+│   └── paths.py                  # Global path configuration - UPDATE AFTER CLONING
 ├── src/                          # Core components
-│   ├── __init__.py               # Package initialization
+│   ├── __init__.py               
 │   ├── unet_model.py             # U-Net architecture & loss functions
-│   ├── audio_utils.py            # Audio I/O utilities (Python 3.13+ compatible)
-│   └── utils.py                  # Helper functions & utilities
-├── streamlit_app/
-│   └── app.py                    # Streamlit web interface
+│   ├── audio_utils.py            # Audio I/O utilities
+│   └── utils.py                  # Helper functions 
+├── scripts/                      # Main execution scripts
+│   ├── __init__.py
+│   ├── inference.py              # Audio enhancement script
+│   ├── setup_environment.py      # Environment setup helper
+│   └── train.py                  # Training guide (points to notebook)
+├── tools/                        # Testing and analysis tools
+│   ├── __init__.py
+│   ├── test_system.py            # System functionality tests
+│   └── test_quality.py           # Audio quality assessment
+├── apps/                         # User-facing applications
+│   ├── __init__.py
+│   ├── requirements.txt          
+│   └── streamlit_app.py          # Web-based audio enhancement interface
+├── notebooks/                    
+│   └── main_training.ipynb       # Complete training pipeline
 ├── dataset/                      # Training and test data
-├── models/                       # Saved model checkpoints
-├── results/                      # Training results and plots  
-├── inference.py                  # Audio enhancement script
-├── train.py                      # Training guide (points to notebook)
-├── test_system.py                # Basic system tests
-└── test_quality.py               # Audio quality assessment
+├── models/                       # Saved model checkpoints   
+├── results/                      # Training results and analysis
+├── presentation/                 
+├── setup.py                      # Post-clone setup script
+├── requirements.txt              
+├── config.yaml                   # Project configuration
+├── run_app.sh                    
+├── run_inference.sh              
+└── run_tests.sh                  
 ```
 
-## Quick Start
+## Quick Setup Guide
 
-### 1. Install Dependencies
+After cloning this repository, follow these steps to configure the project for your system:
+
+### Option 1: Automatic Setup (Recommended)
+
 ```bash
-pip install -r requirements.txt
+# Run the setup script
+python setup.py
+
+# Or with validation
+python setup.py --validate
 ```
 
-### 2. Training (Recommended)
+### Option 2: Manual Configuration
+
+1. **Update Base Path**
+   - Edit `config/paths.py`
+   - Change `BASE_DIR = Path("/home/radhey/code/ai-clrvoice")` to your path
+   - Or uncomment the auto-detection line
+
+2. **Alternative: Use Auto-Detection**
+   - In `config/paths.py`, comment out the manual path
+   - Uncomment: `BASE_DIR = Path(__file__).parent.parent.absolute()`
+
+### Option 3: Environment Variables
+
+Create a `.env` file in the project root:
+
 ```bash
-# Open the main training notebook
-jupyter notebook notebooks/main_training.ipynb
-# or use VS Code with Jupyter extension
+# Generate .env file
+python scripts/setup_environment.py --create-env
 ```
 
-### 3. Use the Web Interface
+### Verification
+
+Test your setup:
+
 ```bash
-cd streamlit_app
-streamlit run app.py
+# Validate configuration
+python scripts/setup_environment.py --validate
+
+# Quick system test
+python tools/test_system.py
 ```
 
-### 4. Command Line Inference
-```bash
-python inference.py input_noisy.wav output_enhanced.wav
-```
+### Next Steps
+
+1. Install dependencies: `pip install -r requirements.txt`
+2. Run inference: `./run_inference.sh input.wav output.wav`
+3. Start web app: `./run_app.sh`
+4. Run tests: `./run_tests.sh`
+
+## Key Features:
+- **Single Configuration File**: `config/paths.py` contains all path definitions
+- **Easy Setup**: Run `python setup.py` after cloning to configure paths
+- **Auto-Detection**: Automatically detects project structure
 
 ## Model Architecture
 
@@ -68,7 +117,7 @@ python inference.py input_noisy.wav output_enhanced.wav
 - Sample rate: 16kHz
 - STFT: n_fft=1024, hop_length=256
 
-## Performance
+### Performance
 
 - **Validation Loss**: 0.000071
 - **Average Improvement**: 56.3%
@@ -95,47 +144,6 @@ To start training:
 - GPU optimization with CUDA
 - Early stopping and checkpointing
 - Robust error handling and recovery
-
-## Usage Examples
-
-### Web Interface
-1. Upload a noisy audio file
-2. Click "Enhance Audio"
-3. Listen to results and download enhanced audio
-4. View waveform and spectrogram comparisons
-
-### Command Line
-```bash
-# Enhance a single file
-python inference.py noisy_speech.wav clean_speech.wav
-
-# Basic system testing
-python test_system.py
-
-# Quality assessment
-python test_quality.py
-```
-
-## Supported Audio Formats
-
-- WAV (recommended)
-- MP3
-- FLAC
-- M4A
-
-## Technical Details
-
-### Data Processing:
-- 4-second chunks with 25% overlap
-- STFT-based magnitude processing
-- Min-max normalization
-- Crossfading for chunk blending
-
-### GPU Optimization:
-- CUDA memory management
-- Batch processing
-- Gradient clipping
-- Mixed precision support
 
 ## Requirements
 
