@@ -1,0 +1,21 @@
+{
+  "model_info": {
+    "parameters": 1927841,
+    "architecture": "UNet",
+    "base_filters": 32,
+    "depth": 3,
+    "dropout": 0.1
+  },
+  "training_results": {
+    "epochs_completed": 5,
+    "best_val_loss": 5.159741202053713e-05,
+    "final_train_loss": 7.198577042221255e-05,
+    "final_val_loss": 5.410347143510621e-05,
+    "final_lr": 0.001
+  },
+  "test_results": {
+    "avg_test_loss": 1.4903847159075667e-05,
+    "avg_improvement_percent": 79.40229797363281,
+    "num_test_samples": 5
+  }
+}
