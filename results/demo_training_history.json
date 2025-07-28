@@ -1,0 +1,13 @@
+{
+  "train_losses": [
+    1691.649854
+  ],
+  "val_losses": [
+    1755.849731
+  ],
+  "model_params": 1927841,
+  "device": "cpu",
+  "batch_size": 1,
+  "epochs_completed": 1,
+  "training_approach": "demo_run"
+}
