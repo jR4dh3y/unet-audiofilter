@@ -1,7 +1,4 @@
-# Speech Enhancement Package
-"""
-Simplified AI speech enhancement package
-"""
+"""Simplified AI speech enhancement package"""
 
 from .unet_model import UNet, ConvBlock, DownBlock, UpBlock, SpectralLoss
 from .audio_utils import load_audio, save_audio

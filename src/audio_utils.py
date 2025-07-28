@@ -1,7 +1,4 @@
-"""
-Audio I/O utilities using ffmpeg for Python 3.13+ compatibility
-Replaces soundfile dependency which requires aifc module
-"""
+"""Audio I/O utilities using ffmpeg for Python 3.13+ compatibility"""
 
 import os
 import numpy as np
@@ -10,16 +7,7 @@ import tempfile
 from pathlib import Path
 
 def load_audio(input_path, sample_rate=16000):
-    """
-    Load audio using ffmpeg for maximum format compatibility
-    
-    Args:
-        input_path: Path to input audio file
-        sample_rate: Target sample rate (default: 16000, None to keep original)
-    
-    Returns:
-        tuple: (audio_array, sample_rate)
-    """
+    """Load audio using ffmpeg for maximum format compatibility"""
     try:
         if sample_rate is None:
             # Get original sample rate first

@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""
-High-Quality Speech Enhancement Inference
-GPU-Optimized Model with Chunked Processing
-"""
+"""Speech Enhancement Inference"""
 
 import os
 import sys
@@ -12,7 +9,6 @@ import librosa
 import argparse
 from pathlib import Path
 
-# Add src to path
 sys.path.append('/home/radhey/code/ai-clrvoice')
 from src.unet_model import UNet
 from src.audio_utils import load_audio, save_audio
@@ -21,7 +17,6 @@ class GPUSpeechEnhancer:
     """High-quality speech enhancer using trained GPU model"""
 
     def __init__(self, model_path, device='auto'):
-        """Initialize with trained model"""
         if device == 'auto':
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         else:

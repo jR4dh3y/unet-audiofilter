@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
-"""
-Simple training script using the refactored GPU training module
-"""
+"""Training script - redirects to notebook"""
 
 import sys
 import os
 
-# Add src to path
 sys.path.append('/home/radhey/code/ai-clrvoice')
 
 def main():
     """Training has been moved to the Jupyter notebook"""
-    print("🚀 Speech Enhancement Training")
+    print("Speech Enhancement Training")
     print("=" * 50)
-    print("⚠️  Training functionality has been moved to the Jupyter notebook")
+    print("Training functionality has been moved to the Jupyter notebook")
     print("   Please use: notebooks/main_training.ipynb")
     print("   This provides a complete training pipeline with:")
     print("   - GPU training setup")

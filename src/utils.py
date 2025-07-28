@@ -1,6 +1,4 @@
-"""
-Utility functions for speech enhancement project
-"""
+"""Utility functions for speech enhancement project"""
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,21 +10,12 @@ import os
 from typing import List, Dict, Tuple, Optional
 import pandas as pd
 
-# Set style for better plots
 plt.style.use('seaborn-v0_8')
 sns.set_palette("husl")
 
 def plot_waveform(waveform: np.ndarray, sr: int = 16000, title: str = "Waveform", 
                  figsize: Tuple[int, int] = (12, 4)) -> None:
-    """
-    Plot audio waveform
-    
-    Args:
-        waveform: Audio waveform
-        sr: Sample rate
-        title: Plot title
-        figsize: Figure size
-    """
+    """Plot audio waveform"""
     plt.figure(figsize=figsize)
     time = np.arange(len(waveform)) / sr
     plt.plot(time, waveform)

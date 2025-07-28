@@ -9,12 +9,10 @@ import sys
 import io
 import tempfile
 
-# Add src to path
 sys.path.append('/home/radhey/code/ai-clrvoice')
 from src.unet_model import UNet
 from src.audio_utils import load_audio, save_audio, write_audio_bytes
 
-# Page configuration
 st.set_page_config(
     page_title="AI Speech Enhancement",
     page_icon="🎙️",
@@ -22,7 +20,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
 st.markdown("""
 <style>
     .main-header {

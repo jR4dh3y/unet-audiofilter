@@ -9,7 +9,6 @@ class ConvBlock(nn.Module):
 
     def __init__(self, in_channels, out_channels, kernel_size=3, padding=1, dropout=0.0):
         super(ConvBlock, self).__init__()
-
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size, padding=padding)
         self.bn1 = nn.BatchNorm2d(out_channels)
         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size, padding=padding)
@@ -29,7 +28,6 @@ class DownBlock(nn.Module):
 
     def __init__(self, in_channels, out_channels, dropout=0.0):
         super(DownBlock, self).__init__()
-
         self.conv_block = ConvBlock(in_channels, out_channels, dropout=dropout)
         self.pool = nn.MaxPool2d(2)
 
@@ -44,7 +42,6 @@ class UpBlock(nn.Module):
 
     def __init__(self, in_channels, out_channels, dropout=0.0):
         super(UpBlock, self).__init__()
-
         self.up = nn.ConvTranspose2d(in_channels, in_channels // 2, 2, stride=2)
         self.conv_block = ConvBlock(in_channels, out_channels, dropout=dropout)
 

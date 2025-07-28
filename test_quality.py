@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
-"""
-Quick quality assessment for enhanced audio
-"""
+"""Quick quality assessment for enhanced audio"""
 
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-# Add src to path
 sys.path.append('/home/radhey/code/ai-clrvoice')
 from src.audio_utils import load_audio
 
@@ -21,12 +18,10 @@ def calculate_snr(signal, noise):
 def analyze_enhancement(noisy_path, clean_path, enhanced_path):
     """Analyze the quality of audio enhancement"""
     
-    # Load audio files
     noisy, sr = load_audio(noisy_path)
     clean, sr = load_audio(clean_path)
     enhanced, sr = load_audio(enhanced_path)
     
-    # Ensure same length
     min_len = min(len(noisy), len(clean), len(enhanced))
     noisy = noisy[:min_len]
     clean = clean[:min_len]
@@ -79,7 +74,7 @@ def main():
             result['file_id'] = file_id
             results.append(result)
     
-    # Summary statistics
+    # Summary
     if results:
         avg_snr_improvement = np.mean([r['snr_improvement'] for r in results])
         avg_mse_improvement = np.mean([r['mse_improvement'] for r in results])
