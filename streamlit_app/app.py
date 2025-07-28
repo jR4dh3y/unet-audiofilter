@@ -11,9 +11,8 @@ import tempfile
 
 # Add src to path
 sys.path.append('/home/radhey/code/ai-clrvoice')
-from src.model import UNet
-from src.preprocessing import STFTProcessor
-from src.audio_io import load_audio, save_audio, write_audio_bytes
+from src.unet_model import UNet
+from src.audio_utils import load_audio, save_audio, write_audio_bytes
 
 # Page configuration
 st.set_page_config(

@@ -14,8 +14,8 @@ from pathlib import Path
 
 # Add src to path
 sys.path.append('/home/radhey/code/ai-clrvoice')
-from src.model import UNet
-from src.audio_io import load_audio, save_audio
+from src.unet_model import UNet
+from src.audio_utils import load_audio, save_audio
 
 class GPUSpeechEnhancer:
     """High-quality speech enhancer using trained GPU model"""

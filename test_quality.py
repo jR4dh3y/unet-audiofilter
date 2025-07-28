@@ -10,7 +10,7 @@ from pathlib import Path
 
 # Add src to path
 sys.path.append('/home/radhey/code/ai-clrvoice')
-from src.audio_io import load_audio
+from src.audio_utils import load_audio
 
 def calculate_snr(signal, noise):
     """Calculate Signal-to-Noise Ratio in dB"""
