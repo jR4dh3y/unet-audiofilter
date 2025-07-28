@@ -2,51 +2,58 @@
 
 A GPU-accelerated deep learning system for speech enhancement using U-Net architecture.
 
-## 🎯 Project Overview
+## Project Overview
 
 This project implements a complete pipeline for removing background noise from speech recordings using a U-Net model trained on the VoiceBank+DEMAND dataset.
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 ai-clrvoice/
-├── src/
-│   ├── __init__.py
-│   └── model.py              # U-Net model implementation
 ├── notebooks/
-│   ├── gpu.ipynb             # Working GPU training notebook
-│   └── 07_gpu_training.ipynb # Complete GPU training pipeline
+│   └── main_training.ipynb       # Main working file - Complete training pipeline
+├── src/                          # Core components
+│   ├── __init__.py               # Package initialization
+│   ├── unet_model.py             # U-Net architecture & loss functions
+│   ├── audio_utils.py            # Audio I/O utilities (Python 3.13+ compatible)
+│   └── utils.py                  # Helper functions & utilities
 ├── streamlit_app/
-│   ├── app.py               # Web interface for audio enhancement
-│   └── requirements.txt     # Streamlit dependencies
-├── models/
-│   └── best_gpu_model.pth   # Trained model checkpoint
-├── dataset/                 # VoiceBank+DEMAND dataset
-├── results/                 # Training results and enhanced audio
-├── inference_gpu.py         # Standalone inference script
-├── test_quality.py         # Quality assessment tools
-└── requirements.txt        # Project dependencies
+│   └── app.py                    # Streamlit web interface
+├── dataset/                      # Training and test data
+├── models/                       # Saved model checkpoints
+├── results/                      # Training results and plots  
+├── inference.py                  # Audio enhancement script
+├── train.py                      # Training guide (points to notebook)
+├── test_system.py                # Basic system tests
+└── test_quality.py               # Audio quality assessment
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Use the Web Interface
+### 2. Training (Recommended)
+```bash
+# Open the main training notebook
+jupyter notebook notebooks/main_training.ipynb
+# or use VS Code with Jupyter extension
+```
+
+### 3. Use the Web Interface
 ```bash
 cd streamlit_app
 streamlit run app.py
 ```
 
-### 3. Command Line Inference
+### 4. Command Line Inference
 ```bash
-python inference_gpu.py input_noisy.wav output_enhanced.wav
+python inference.py input_noisy.wav output_enhanced.wav
 ```
 
-## 🧠 Model Architecture
+## Model Architecture
 
 - **U-Net Architecture**: Encoder-decoder with skip connections
 - **Parameters**: 1,927,841 trainable parameters
@@ -61,18 +68,25 @@ python inference_gpu.py input_noisy.wav output_enhanced.wav
 - Sample rate: 16kHz
 - STFT: n_fft=1024, hop_length=256
 
-## 📊 Performance
+## Performance
 
 - **Validation Loss**: 0.000071
 - **Average Improvement**: 56.3%
 - **SNR Improvement**: +5.84 dB on test samples
 - **Processing**: Real-time capable on GPU
 
-## 🛠️ Training
+## Training
 
-To retrain the model, use the `gpu.ipynb` notebook:
+The main training pipeline is located in `notebooks/main_training.ipynb`. This notebook contains:
 
-1. Open `notebooks/gpu.ipynb`
+- Complete GPU training setup
+- Real-time progress monitoring
+- Model evaluation and testing
+- Audio visualization tools
+- Interactive parameter tuning
+
+To start training:
+1. Open `notebooks/main_training.ipynb`
 2. Run all cells in sequence
 3. Model will be saved to `models/best_gpu_model.pth`
 
@@ -82,7 +96,7 @@ To retrain the model, use the `gpu.ipynb` notebook:
 - Early stopping and checkpointing
 - Robust error handling and recovery
 
-## 📈 Usage Examples
+## Usage Examples
 
 ### Web Interface
 1. Upload a noisy audio file
@@ -93,20 +107,23 @@ To retrain the model, use the `gpu.ipynb` notebook:
 ### Command Line
 ```bash
 # Enhance a single file
-python inference_gpu.py noisy_speech.wav clean_speech.wav
+python inference.py noisy_speech.wav clean_speech.wav
+
+# Basic system testing
+python test_system.py
 
 # Quality assessment
 python test_quality.py
 ```
 
-## 🎵 Supported Audio Formats
+## Supported Audio Formats
 
 - WAV (recommended)
 - MP3
 - FLAC
 - M4A
 
-## 🔧 Technical Details
+## Technical Details
 
 ### Data Processing:
 - 4-second chunks with 25% overlap
@@ -120,7 +137,7 @@ python test_quality.py
 - Gradient clipping
 - Mixed precision support
 
-## 📝 Requirements
+## Requirements
 
 - Python 3.8+
 - PyTorch 1.9+
@@ -128,7 +145,7 @@ python test_quality.py
 - 4GB+ GPU memory for training
 - 16GB+ RAM for dataset loading
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -136,14 +153,13 @@ python test_quality.py
 4. Test thoroughly
 5. Submit a pull request
 
-## 📄 License
+## License
 
 This project is open source and available under the MIT License.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - VoiceBank+DEMAND dataset for training data
 - U-Net architecture for speech enhancement
 - PyTorch team for the deep learning framework
 - Streamlit for the web interface framework
-# 🚀 Quick Start
