@@ -1,0 +1,39 @@
+# Configuration file for speech enhancement project
+
+# Dataset configuration
+dataset:
+  sample_rate: 16000
+  n_fft: 512
+  hop_length: 256
+  win_length: 512
+  window: 'hann'
+  center: True
+  pad_mode: 'reflect'
+  
+# Training configuration
+training:
+  batch_size: 16
+  learning_rate: 0.001
+  num_epochs: 100
+  patience: 10
+  min_delta: 0.001
+  validation_split: 0.1
+  
+# Model configuration
+model:
+  input_channels: 1
+  output_channels: 1
+  base_filters: 64
+  depth: 4
+  dropout: 0.2
+  
+# Paths
+paths:
+  clean_train: 'dataset/clean_trainset_28spk_wav'
+  noisy_train: 'dataset/noisy_trainset_28spk_wav'
+  clean_test: 'dataset/clean_testset_wav'
+  noisy_test: 'dataset/noisy_testset_wav'
+  train_scp: 'dataset/train.scp'
+  test_scp: 'dataset/test.scp'
+  model_save: 'models'
+  results_save: 'results'
