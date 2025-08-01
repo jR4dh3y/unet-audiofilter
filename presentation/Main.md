@@ -26,20 +26,20 @@ style: |
 
 # Clear Voice
 
-## unet speech enhancement system
+## U-Net speech enhancement system
 
 <small>*AI-powered noise reduction for crystal clear audio*</small>
 ![bg right](logo.png)
 
 ---
 
-## **Team**
+## **Team Members**
 
 <div style="font-size: 22px;">
 
 - **Radhey Kalra** 
-- **Team Member** 
-![bg right:50%](https://picsum.photos/720?image=3)
+- **Aabish Malik** 
+![bg right:50%](team.png)
 
 </div>
 
@@ -59,7 +59,7 @@ style: |
 - Complex professional software requirements
 - Limited real-time processing capabilities
 
-![bg right:50%](https://fcit.usf.edu/matrix/wp-content/uploads/2016/09/50012-700.png)
+![bg right:50% 140%](gif.gif)
 
 </div>
 
@@ -86,10 +86,8 @@ style: |
 ---
 
 ## **Data Flow Diagram**
+<div style="font-size: 15px;">
 
-![Data Flow center:20%  40%](dataflow_diagram.png)
-
-<div style="font-size: 18px;">
 
 ### Processing Pipeline
 1. **Input** → Noisy audio file loaded via ffmpeg
@@ -97,8 +95,8 @@ style: |
 3. **Enhance** → U-Net model processes magnitude spectrogram
 4. **Reconstruct** → ISTFT combines enhanced magnitude with original phase
 5. **Output** → Clean audio saved in desired format
-6. **Evaluate** → Quality metrics and visualization tools
 
+![fit](dataflow_simple.png)
 </div>
 
 ---
@@ -124,11 +122,31 @@ style: |
 
 ## **Outputs**
 
+<div style="font-size: 19px;display:flex; justify-content:center; align-items:center; flex-direction:column;" >
+
+### Audio Comparison
+
+**Noisy:**
+<audio controls>
+  <source src="../results/comparison/p232_010_noisy.wav" type="audio/wav">
+</audio>
+
+
+**Enhanced:**
+<audio controls>
+  <source src="../results/comparison/p232_010_enhanced.wav" type="audio/wav">
+</audio>
+
+
+**Clean:**
+<audio controls>
+  <source src="../results/comparison/p232_010_clean.wav" type="audio/wav">
+</audio>
+
+
+![bg right fit](audio_comparison.png)
+
 </div>
-
-<div style="font-size: 19px;display:flex; justify-content:center; align-items:center;">
-
-![h:300](streamlit_interface.png) ![h:300](training_curves.png)
 
 
 </div>
@@ -143,8 +161,10 @@ style: |
 
 <div style="font-size: 19px;">
 
+![bg right:50% ](future.png)
+
 - Real-time streaming audio enhancement
-- Multi-speaker voice separation
+- Multi-channel voice separation
 - Mobile app development for iOS/Android
 - Integration with video conferencing platforms
 

@@ -80,7 +80,7 @@ def load_model():
         model.load_state_dict(checkpoint['model_state_dict'])
         model.eval()
         
-        st.success(f"✅ Model loaded successfully from: {model_path.name}")
+        # st.success(f"✅ Model loaded successfully from: {model_path.name}")
         return model, device, checkpoint
     
     except Exception as e:
@@ -282,7 +282,7 @@ def main():
     st.markdown('<div class="main-header"><h1>🎙️ AI Speech Enhancement</h1><p>Remove background noise from speech recordings using deep learning</p></div>', unsafe_allow_html=True)
     
     # Display project information
-    st.info(f"🏠 Project Directory: {get_path('base')}")
+
     
     # Load model
     model, device, checkpoint = load_model()
@@ -295,6 +295,7 @@ def main():
     
     # Sidebar
     with st.sidebar:
+        st.success(f"✅ Model loaded successfully from: {get_path('models.best_model').name}")
         st.header("📊 Model Information")
         if checkpoint:
             col1, col2 = st.columns(2)
@@ -307,6 +308,7 @@ def main():
         
         st.header("🎛️ Settings")
         st.info("Model uses optimized settings:\n- Chunk size: 4.0s\n- Overlap: 25%\n- STFT: 1024/256")
+        st.info(f"🏠 Project Directory: {get_path('base')}")
     
     # Main content
     col1, col2 = st.columns([1, 1])
@@ -331,7 +333,7 @@ def main():
                 
                 try:
                     original_audio, original_sr = load_audio(tmp_file.name)
-                    st.audio(uploaded_file.getvalue(), format='audio/wav', sample_rate=original_sr)
+                    st.audio(uploaded_file.getvalue(), format='audio/wav')
                     
                     duration = len(original_audio) / original_sr
                     st.metric("Duration", f"{duration:.2f} seconds")
@@ -355,7 +357,7 @@ def main():
                     audio_bytes = write_audio_bytes(enhanced_audio, enhanced_sr, format='WAV')
                     
                     st.success("✅ Enhancement complete!")
-                    st.audio(audio_bytes, format='audio/wav', sample_rate=enhanced_sr)
+                    st.audio(audio_bytes, format='audio/wav')
                     
                     # Download button
                     filename = f"enhanced_{uploaded_file.name.split('.')[0]}.wav"
