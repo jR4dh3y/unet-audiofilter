@@ -1,83 +1,129 @@
 #!/usr/bin/env python3
-"""
-Global Path Configuration for AI Speech Enhancement System
+"""Centralized project path handling (refactored).
 
-This module provides centralized path management for the entire project.
-After cloning the repository, users only need to update BASE_DIR to match
-their local setup.
+Changes vs old version:
+* Removed user-specific absolute BASE_DIR.
+* Adds environment variable / auto-detection based root resolution.
+* Provides `reinit_paths` to rebuild PATHS dynamically.
+* Makes `quick_setup` actually use the provided path.
+
+Public API retained: BASE_DIR, PATHS, get_path, ensure_dir_exists, validate_paths,
+setup_project_structure, quick_setup.
+
+Environment variable overrides (first match used):
+    UNET_AUDIOFILTER_ROOT | AI_CLEANVOICE_ROOT | PROJECT_ROOT
+
+Auto-detect markers (any present in a parent => root):
+    .git, config.yaml, requirements.txt, README.md, src/
 
 Usage:
-    from config.paths import PATHS
-    model_path = PATHS['models']['best_model']
-    dataset_path = PATHS['dataset']['noisy_test']
+    from config.paths import PATHS, get_path
+    model_path = get_path('models.best_model')
 """
 
-import os
+from __future__ import annotations
+
 from pathlib import Path
+import os
+from typing import Iterable, Dict, Any
+
+__all__ = [
+    'BASE_DIR', 'PATHS', 'get_path', 'ensure_dir_exists', 'validate_paths',
+    'setup_project_structure', 'quick_setup', 'reinit_paths'
+]
+
+
+def _env_root_candidates() -> Iterable[str]:
+    for var in ("UNET_AUDIOFILTER_ROOT", "AI_CLEANVOICE_ROOT", "PROJECT_ROOT"):
+        val = os.getenv(var)
+        if val:
+            yield val
+
+
+def _detect_base_dir() -> Path:
+    # 1. Environment variable overrides
+    for candidate in _env_root_candidates():
+        p = Path(candidate).expanduser().resolve()
+        if p.exists():
+            return p
+
+    # 2. Walk parents from this file upwards searching for marker files/dirs
+    here = Path(__file__).resolve()
+    markers = {"config.yaml", "requirements.txt", "README.md", ".git", "src"}
+    for parent in [here.parent] + list(here.parents):
+        if any((parent / m).exists() for m in markers):
+            return parent
+
+    # 3. Fallback to current working directory
+    return Path.cwd()
+
+
+def _build_paths(base: Path) -> Dict[str, Any]:
+    return {
+        'base': base,
+        'src': base / 'src',
+        'config': base / 'config',
+        'scripts': base / 'scripts',
+        'tools': base / 'tools',
+        'apps': base / 'apps',
+        'dataset': {
+            'base': base / 'dataset',
+            'clean_test': base / 'dataset' / 'clean_testset_wav',
+            'clean_train': base / 'dataset' / 'clean_trainset_28spk_wav',
+            'noisy_test': base / 'dataset' / 'noisy_testset_wav',
+            'noisy_train': base / 'dataset' / 'noisy_trainset_28spk_wav',
+            'test_scp': base / 'dataset' / 'test.scp',
+            'train_scp': base / 'dataset' / 'train.scp',
+        },
+        'models': {
+            'base': base / 'models',
+            'best_model': base / 'models' / 'best_gpu_model.pth',
+            'checkpoint_10': base / 'models' / 'checkpoint_epoch_10.pth',
+            'checkpoint_5': base / 'models' / 'checkpoint_epoch_5.pth',
+        },
+        'results': {
+            'base': base / 'results',
+            'comparison': base / 'results' / 'comparison',
+            'enhanced_samples': base / 'results' / 'enhanced_samples',
+            'gpu_training_history': base / 'results' / 'gpu_training_history.json',
+            'gpu_model_summary': base / 'results' / 'gpu_model_summary.json',
+        },
+        'notebooks': base / 'notebooks',
+        'presentation': base / 'presentation',
+        'config_yaml': base / 'config.yaml',
+        'requirements': base / 'requirements.txt',
+    }
+
+
+# Initialize globals
+BASE_DIR: Path = _detect_base_dir()
+PATHS: Dict[str, Any] = _build_paths(BASE_DIR)
 
 # ============================================================================
 # MAIN CONFIGURATION - UPDATE THIS AFTER CLONING
 # ============================================================================
 
-# Base directory - UPDATE THIS PATH after cloning to your system
-# Option 1: Manual path (update this line after cloning)
-BASE_DIR = Path("/home/radhey/code/ai-clrvoice")
+def reinit_paths(new_base: Path) -> None:
+    """Rebuild PATHS using a new base directory and refresh sys.path.
 
-# Option 2: Auto-detect base directory (recommended for most users)
-# Uncomment the line below and comment out the line above to use auto-detection
-# BASE_DIR = Path(__file__).parent.parent.absolute()
+    Args:
+        new_base: Path to new root.
+    """
+    global BASE_DIR, PATHS
+    BASE_DIR = new_base.expanduser().resolve()
+    PATHS = _build_paths(BASE_DIR)
+    # Refresh python path ordering after changing base
+    try:
+        add_to_python_path(force=True)  # type: ignore[name-defined]
+    except NameError:
+        # add_to_python_path defined later; silent pass (will run at end of file)
+        pass
 
 # ============================================================================
 # DERIVED PATHS - DO NOT MODIFY UNLESS CHANGING PROJECT STRUCTURE
 # ============================================================================
 
-PATHS = {
-    # Core directories
-    'base': BASE_DIR,
-    'src': BASE_DIR / 'src',
-    'config': BASE_DIR / 'config',
-    
-    # Script directories
-    'scripts': BASE_DIR / 'scripts',
-    'tools': BASE_DIR / 'tools', 
-    'apps': BASE_DIR / 'apps',
-    
-    # Data directories
-    'dataset': {
-        'base': BASE_DIR / 'dataset',
-        'clean_test': BASE_DIR / 'dataset' / 'clean_testset_wav',
-        'clean_train': BASE_DIR / 'dataset' / 'clean_trainset_28spk_wav',
-        'noisy_test': BASE_DIR / 'dataset' / 'noisy_testset_wav',
-        'noisy_train': BASE_DIR / 'dataset' / 'noisy_trainset_28spk_wav',
-        'test_scp': BASE_DIR / 'dataset' / 'test.scp',
-        'train_scp': BASE_DIR / 'dataset' / 'train.scp',
-    },
-    
-    # Model directories  
-    'models': {
-        'base': BASE_DIR / 'models',
-        'best_model': BASE_DIR / 'models' / 'best_gpu_model.pth',
-        'checkpoint_10': BASE_DIR / 'models' / 'checkpoint_epoch_10.pth',
-        'checkpoint_5': BASE_DIR / 'models' / 'checkpoint_epoch_5.pth',
-    },
-    
-    # Results directories
-    'results': {
-        'base': BASE_DIR / 'results',
-        'comparison': BASE_DIR / 'results' / 'comparison',
-        'enhanced_samples': BASE_DIR / 'results' / 'enhanced_samples',
-        'gpu_training_history': BASE_DIR / 'results' / 'gpu_training_history.json',
-        'gpu_model_summary': BASE_DIR / 'results' / 'gpu_model_summary.json',
-    },
-    
-    # Documentation and presentation
-    'notebooks': BASE_DIR / 'notebooks',
-    'presentation': BASE_DIR / 'presentation',
-    
-    # Configuration files
-    'config_yaml': BASE_DIR / 'config.yaml',
-    'requirements': BASE_DIR / 'requirements.txt',
-}
+    # (Moved python path refresh inside reinit_paths)
 
 # ============================================================================
 # UTILITY FUNCTIONS
@@ -177,19 +223,22 @@ def setup_project_structure():
 # ENVIRONMENT SETUP
 # ============================================================================
 
-def add_to_python_path():
-    """Add project directories to Python path"""
+def add_to_python_path(force: bool = False):
+    """Add project directories to Python path if not already present.
+
+    Args:
+        force: If True, ensure paths are moved to front even if present.
+    """
     import sys
-    
-    paths_to_add = [
-        str(PATHS['base']),
-        str(PATHS['src']),
-        str(PATHS['config'])
-    ]
-    
-    for path in paths_to_add:
-        if path not in sys.path:
-            sys.path.insert(0, path)
+
+    paths_to_add = [str(PATHS['base']), str(PATHS['src']), str(PATHS['config'])]
+    for p in paths_to_add:
+        if p in sys.path:
+            if force:
+                sys.path.remove(p)
+                sys.path.insert(0, p)
+        else:
+            sys.path.insert(0, p)
 
 # Auto-setup when imported
 add_to_python_path()
@@ -198,42 +247,36 @@ add_to_python_path()
 # QUICK SETUP FOR NEW INSTALLATIONS
 # ============================================================================
 
-def quick_setup(new_base_dir: str = None):
-    """
-    Quick setup function for new installations
-    
+def quick_setup(new_base_dir: str | Path | None = None):
+    """Validate and (optionally) re-root the project paths.
+
     Args:
-        new_base_dir: New base directory path (optional)
+        new_base_dir: Optional new base directory. If provided, PATHS are rebuilt.
     """
     if new_base_dir:
-        global BASE_DIR, PATHS
-        BASE_DIR = Path(new_base_dir)
-        
-        # Rebuild PATHS with new base directory
-        # Note: In production, you'd want to update the file itself
-        print(f"Base directory set to: {BASE_DIR}")
-        print("Please update BASE_DIR in config/paths.py for permanent changes")
-    
-    # Validate current setup
+        reinit_paths(Path(new_base_dir))
+        print(f"→ Base directory overridden: {BASE_DIR}")
+    else:
+        print(f"→ Using detected base directory: {BASE_DIR}")
+
     validation = validate_paths()
-    
+
     print("=== Path Validation ===")
     for valid_path in validation['valid']:
         print(f"✓ {valid_path}")
-    
     for missing_path in validation['missing']:
         print(f"✗ Missing: {missing_path}")
-    
     for error in validation['errors']:
         print(f"⚠ Error: {error}")
-    
-    # Create missing directories
+
+    # Create missing directories (non-destructive)
     setup_project_structure()
-    
-    print(f"\n=== Setup Complete ===")
+
+    print("\n=== Setup Complete ===")
     print(f"Project root: {BASE_DIR}")
+    if new_base_dir:
+        print("(Override is session-scoped; set an environment variable for persistence)")
     print("Ready to use!")
 
 if __name__ == "__main__":
-    # Run quick setup when executed directly
-    quick_setup()
+        quick_setup()

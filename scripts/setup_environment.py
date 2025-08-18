@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""
-Environment Setup Script for AI Speech Enhancement System
+"""Environment / convenience utilities.
 
-This script helps users quickly configure the project after cloning.
-It can auto-detect the project location or accept a custom path.
+NOTE: Direct editing of BASE_DIR in `config/paths.py` is deprecated.
+The path system auto-detects root; use an environment variable override if needed:
+
+    export UNET_AUDIOFILTER_ROOT=/path/to/project
+
+This script now focuses on optional validation and generating a .env file.
 
 Usage:
-    python scripts/setup_environment.py                    # Auto-detect
-    python scripts/setup_environment.py /path/to/project   # Custom path
-    python scripts/setup_environment.py --validate         # Just validate
+    python scripts/setup_environment.py --validate         # Validate structure
+    python scripts/setup_environment.py --create-env       # Create .env file
+    python scripts/setup_environment.py --validate --create-env
 """
 
 import sys
@@ -29,46 +32,13 @@ def find_project_root():
     return None
 
 def update_path_config(project_root: Path):
-    """Update the BASE_DIR in config/paths.py"""
-    
-    config_file = project_root / 'config' / 'paths.py'
-    
-    if not config_file.exists():
-        print(f"❌ Config file not found: {config_file}")
-        return False
-    
-    try:
-        # Read current config
-        with open(config_file, 'r') as f:
-            content = f.read()
-        
-        # Find and replace the BASE_DIR line
-        lines = content.split('\n')
-        updated_lines = []
-        found_base_dir = False
-        
-        for line in lines:
-            if line.strip().startswith('BASE_DIR = Path(') and not line.strip().startswith('#'):
-                # Replace with new path
-                updated_lines.append(f'BASE_DIR = Path("{project_root}")')
-                found_base_dir = True
-                print(f"✓ Updated BASE_DIR to: {project_root}")
-            else:
-                updated_lines.append(line)
-        
-        if not found_base_dir:
-            print("⚠ Could not find BASE_DIR line to update")
-            return False
-        
-        # Write updated config
-        with open(config_file, 'w') as f:
-            f.write('\n'.join(updated_lines))
-        
-        return True
-        
-    except Exception as e:
-        print(f"❌ Error updating config: {e}")
-        return False
+    """Deprecated placeholder kept for backward compatibility.
+
+    Returns False but informs user of new workflow.
+    """
+    print("ℹ BASE_DIR auto-detected now; no config file modification needed.")
+    print("  Use environment variable UNET_AUDIOFILTER_ROOT to override if required.")
+    return True
 
 def create_env_file(project_root: Path):
     """Create a .env file for environment variables"""
@@ -197,7 +167,7 @@ def main():
             print("python scripts/setup_environment.py /path/to/project")
             return 1
     
-    print(f"Using project root: {project_root}")
+    print(f"Using project root (detected): {project_root}")
     
     if not project_root.exists():
         print(f"❌ Project directory does not exist: {project_root}")
@@ -209,12 +179,8 @@ def main():
         return 0 if success else 1
     
     # Update configuration
-    print(f"\n=== Updating Configuration ===")
-    success = update_path_config(project_root)
-    
-    if not success:
-        print("❌ Failed to update configuration")
-        return 1
+    print(f"\n=== Configuration ===")
+    update_path_config(project_root)
     
     # Create .env file if requested
     if args.create_env:

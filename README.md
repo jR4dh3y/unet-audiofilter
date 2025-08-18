@@ -11,7 +11,7 @@ This project implements a complete pipeline for removing background noise from s
 ai-clrvoice/
 ├── config/                       # Global configuration
 │   ├── __init__.py
-│   └── paths.py                  # Global path configuration - UPDATE AFTER CLONING
+│   └── paths.py                  # Global path configuration (auto-detects root)
 ├── src/                          # Core components
 │   ├── __init__.py               
 │   ├── unet_model.py             # U-Net architecture & loss functions
@@ -46,61 +46,48 @@ ai-clrvoice/
 
 ## Quick Setup Guide
 
-After cloning this repository, follow these steps to configure the project for your system:
+The path system now auto-detects the project root. No manual editing of `BASE_DIR` is required.
 
-### Option 1: Automatic Setup (Recommended)
-
+### 1. Install Dependencies
 ```bash
-# Run the setup script
-python setup.py
-
-# Or with validation
-python setup.py --validate
+pip install -r requirements.txt
 ```
 
-### Option 2: Manual Configuration
-
-1. **Update Base Path**
-   - Edit `config/paths.py`
-   - Change `BASE_DIR = Path("/home/radhey/code/ai-clrvoice")` to your path
-   - Or uncomment the auto-detection line
-
-2. **Alternative: Use Auto-Detection**
-   - In `config/paths.py`, comment out the manual path
-   - Uncomment: `BASE_DIR = Path(__file__).parent.parent.absolute()`
-
-### Option 3: Environment Variables
-
-Create a `.env` file in the project root:
-
+### 2. (Optional) Pin Project Root via Environment Variable
+Useful if running from outside the repo (e.g. notebooks, Docker, CI):
 ```bash
-# Generate .env file
-python scripts/setup_environment.py --create-env
+export UNET_AUDIOFILTER_ROOT="$(pwd)"   # or AI_CLEANVOICE_ROOT / PROJECT_ROOT
 ```
 
-### Verification
+Add to your shell profile to persist.
 
-Test your setup:
-
+### 3. Validate Paths
 ```bash
-# Validate configuration
-python scripts/setup_environment.py --validate
+python -c "from config.paths import quick_setup; quick_setup()"
+```
 
-# Quick system test
+### 4. Run a System Test
+```bash
 python tools/test_system.py
 ```
 
-### Next Steps
+### 5. Inference & App
+```bash
+./run_inference.sh input.wav output.wav
+./run_app.sh
+```
 
-1. Install dependencies: `pip install -r requirements.txt`
-2. Run inference: `./run_inference.sh input.wav output.wav`
-3. Start web app: `./run_app.sh`
-4. Run tests: `./run_tests.sh`
+### 6. (Optional) Generate .env
+```bash
+python scripts/setup_environment.py --create-env
+```
+
+The `.env` will include `UNET_AUDIOFILTER_ROOT` for reproducible launches.
 
 ## Key Features:
-- **Single Configuration File**: `config/paths.py` contains all path definitions
-- **Easy Setup**: Run `python setup.py` after cloning to configure paths
-- **Auto-Detection**: Automatically detects project structure
+- **Automatic Root Detection**: No path edits after cloning
+- **Environment Override**: Set `UNET_AUDIOFILTER_ROOT` (or `AI_CLEANVOICE_ROOT` / `PROJECT_ROOT`) to relocate at runtime
+- **Single Source of Truth**: `config/paths.py` builds all derived directories
 
 ## Model Architecture
 

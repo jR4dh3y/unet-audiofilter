@@ -65,7 +65,7 @@ def load_model():
         
         if not model_path.exists():
             st.error(f"Model not found at: {model_path}")
-            st.info("Please ensure the model file exists or update the path in config/paths.py")
+            st.info("Ensure the model exists; set UNET_AUDIOFILTER_ROOT if running outside repo.")
             return None, None, None
         
         model = UNet(
